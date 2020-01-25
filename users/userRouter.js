@@ -1,8 +1,9 @@
 const express = require('express');
 const user = require("./userDb")
+const post = require("../posts/postDb")
 const router = express.Router();
 
-router.post('/', validatePost,(req, res) => {
+router.post('/', validateUser,(req, res) => {
   // do your magic!
   const userBody = req.body;
     if(!userBody.name){
@@ -13,36 +14,24 @@ router.post('/', validatePost,(req, res) => {
             res.status(201).json(user)
         })
         .catch(err=>{
-            res.status(500).json({errorMessage: "There was an error while saving the user to the database"})
+            res.status(500).json({errorMessage: "There was an error while saving the user"})
         })
 
     }
 });
 
-router.post('/:id/posts', validatePost, validateUserId, (req, res) => {
+router.post('/:id/posts', validatePost, (req, res) => {
   // do your magic!
-  if (!req.body.text) {
-    res.status(400).json({ errorMessage: "Please provide text" });
-  } else {
-    user.getById(req.params.id)
-      .then(user => {
-        if (user) {
-          req.body.user_id = userId;
-          post.insert(req.body)
-            .then(post => {
-              res.status(201).json(post);
-            })
-            .catch(error => {
-              res.status(500).json({errorMessage: "Could not save user" });
-            });
-        } else {
-          res.status(404).json({errorMessage: "ID not found" });
-        }
-      })
-      .catch(error => {
-        res.status(500).json({errorMessage: "Can not connect" });
-      });
-  }
+  const id = req.params.id;
+  const data = req.body;
+  post.insert({...data, user_id: id})
+    .then(data => {
+      res.status(201).json({data})
+    })
+    .catch(err => {
+      console.log(err)
+      res.status(500).json({errorMessage: "Could not post."})
+    })
 });
 
 router.get('/', async (req, res) => {
@@ -67,7 +56,7 @@ router.get('/:id',validateUserId ,(req, res) => {
 
 router.get('/:id/posts', (req, res) => {
   // do your magic!
-  user.getById(req.params.id)
+  user.getUserPosts(req.params.id)
     .then(user => {
       if (user) {
         res.status(200).json(user);
@@ -104,7 +93,7 @@ router.put('/:id', validateUser, (req, res) => {
   .then(user => {
       if (!user){
           res.status(404).json({errorMessage:"The user with the specified ID does not exist."})
-      } else if (!userBody.text){
+      } else if (!userBody.name){
           res.status(400).json({errorMessage:"Please provide text" })
       } else {
          res.status(200).json(user); 
@@ -148,7 +137,7 @@ function validatePost(req, res, next) {
   // do your magic!
   if (!req.body) {
     return res.status(400).json({ errorMessage: "missing post data"} );
-  } else if (!req.body.name) {
+  } else if (!req.body.text) {
     return res.status(400).json({ errorMessage: "missing required text field" });
   } else {
     next();
